@@ -46,9 +46,8 @@ class model(object):
         self.total_epoch = 0
 
     def train(self, train_dataloader, val_dataloader, epochs, tags, save_weight_path=None):
+        total_ep = epochs + self.total_epoch
         for i in range(self.total_epoch, self.total_epoch + epochs):
-            # TRAIN loop
-            total_ep = epochs + self.total_epoch
             print('* Epoch {}/{}'.format(i+1, total_ep))
             start_time = time.time()
             self.b_model.train()
