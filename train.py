@@ -19,6 +19,8 @@ if __name__ == "__main__":
                         help='max len of the sequence')
     parser.add_argument('--epochs', '-ep', dest='epochs', default=5, type=int,
                         help='epochs')
+    parser.add_argument('--resplit', '-rs', dest='resplit', default=None,
+                        help='if not None, then resplit the datat to [train, test, validation]')
     parser.add_argument('--full-train', '-ft', dest='full_trainning', action='store_true',
                         help='if fully train the whole model')                             
 
@@ -33,8 +35,8 @@ if __name__ == "__main__":
     idx2token = np.loadtxt(vocab_path, dtype='str')
     vocab = {idx2token[i]:i for i in range(len(idx2token))}
 
-    train_dataloader, val_dataloader = load_data(train_data_path, test_data_path, vocab, classes=classes, max_len=pargs.max_len,
-                                                 train_size=train_size, val_size=val_size)
+    train_dataloader, test_dataloader, val_dataloader = load_data(train_data_path, test_data_path, vocab, classes=classes, max_len=pargs.max_len,
+                                                                  train_size=train_size, val_size=val_size, resplit=eval(pargs.resplit))
     # new model
     net = model(bert_conf_path, bert_weight, num_class=len(classes))
     if pargs.full_trainning:
@@ -42,3 +44,6 @@ if __name__ == "__main__":
     
     # train
     net.train(train_dataloader, val_dataloader, pargs.epochs, tags)
+
+    # predict
+    print(net.predict(test_dataloader, tags))
