@@ -160,6 +160,8 @@ if __name__ == "__main__":
                         help='train data size')
     parser.add_argument('--val-size', '-vs', dest='val_size', default='0.1', #type=int,
                         help='val data size')
+    parser.add_argument('--max-len', '-ml', dest='max_len', default=120, type=int,
+                        help='max len of the sequence')
     parser.add_argument('--epochs', '-ep', dest='epochs', default=5, type=int,
                         help='epochs')
     parser.add_argument('--full-train', '-ft', dest='full_trainning', action='store_true',
@@ -176,7 +178,7 @@ if __name__ == "__main__":
     idx2token = np.loadtxt(vocab_path, dtype='str')
     vocab = {idx2token[i]:i for i in range(len(idx2token))}
 
-    train_dataloader, val_dataloader = load_data(train_data_path, test_data_path, vocab, classes=classes,
+    train_dataloader, val_dataloader = load_data(train_data_path, test_data_path, vocab, classes=classes, max_len=pargs.max_len,
                                                  train_size=train_size, val_size=val_size)
     # new model
     net = model(bert_conf_path, bert_weight, num_class=len(classes))
