@@ -15,11 +15,7 @@ def process_data(raw_txts, raw_labels, vocab, max_len=120, pad='[PAD]', unk='[UN
                                   if len(l) < max_len else \
                                   ([classes[0]] if add_cls else []) + list(l[:max_len])
                                   for l in raw_labels]).long()
-    #padded_txt_idx = torch.tensor([np.pad([vocab[w] if w in vocab.keys() else id_unk for w in s], 
-    #                       (1, max_len - len(s)), 'constant', constant_values=(id_cls, id_pad)) \
-    #                for s in raw_txts])
-    #padded_labels = torch.tensor([np.pad(l, (1, max_len - len(l)), 'constant', constant_values=(classes[0], classes[0])) 
-    #                 for l in raw_labels])
+    # add attention mask to ignore padding
     att_masks = (padded_txt_idx != id_pad).long()
     return padded_txt_idx, padded_labels, att_masks
 
@@ -47,12 +43,11 @@ def load_data(train_data_path, test_data_path, vocab,
                                                             pad=pad, unk=unk, cls=cls, add_cls=add_cls,classes=classes)
     if train_size is None:
         train_size = len(train_input)
-    #train_size= 1000 #len(train_input)
+    
     train_dataset = TensorDataset(train_input[:train_size], train_output[:train_size], train_att_masks[:train_size])
     temp_dataset = TensorDataset(temp_input, temp_output, temp_att_masks)
 
-    #test_size = int(0.9 * temp_input.size()[0] )
-    #val_size = temp_input.size()[0] - test_size
+    
     if type(val_size) is float:
         val_size = int(val_size * temp_input.size()[0])
         test_size = temp_input.size()[0] - val_size
