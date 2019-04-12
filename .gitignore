@@ -1,0 +1,7 @@
+data/
+pytorch_weight*
+.DS_Store
+.vscode/
+__pycache__
+.syncthing*
+.ipynb_checkpoints/
