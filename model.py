@@ -1,6 +1,5 @@
 import math
 import time
-#import argparse
 import torch
 import numpy as np
 from collections import OrderedDict
@@ -8,9 +7,8 @@ from torch.optim import Adam
 from pytorch_pretrained_bert import BertForTokenClassification, BertAdam
 from pytorch_pretrained_bert import BertTokenizer, BertConfig
 
-from tqdm.auto import tqdm #, trange
+from tqdm.auto import tqdm
 from help_func import f1_score
-#from dataloader import load_data
 
 
 class model(object):

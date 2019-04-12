@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--train-size', '-ts', dest='train_size', type=int, default=-1,
                         help='train data size')
-    parser.add_argument('--val-size', '-vs', dest='val_size', default='0.1', #type=int,
+    parser.add_argument('--val-size', '-vs', dest='val_size', default='0.1',
                         help='val data size')
     parser.add_argument('--max-len', '-ml', dest='max_len', default=120, type=int,
                         help='max len of the sequence')
