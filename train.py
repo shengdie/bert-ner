@@ -21,6 +21,10 @@ if __name__ == "__main__":
                         help='epochs')
     parser.add_argument('--resplit', '-rs', dest='resplit', default=None,
                         help='if not None, then resplit the datat to [train, test, validation]')
+    parser.add_argument('--save', '-s', dest='save_path', default=None,
+                        help='save the best weight in this path.')
+    parser.add_argument('--start-save', dest='start_save', default=3, type=int,
+                        help='start saving the weight after this epochs if save path is given.')                                         
     parser.add_argument('--full-train', '-ft', dest='full_trainning', action='store_true',
                         help='if fully train the whole model')                             
 
@@ -43,7 +47,7 @@ if __name__ == "__main__":
         net.full_trainning(True)
     
     # train
-    net.train(train_dataloader, val_dataloader, pargs.epochs, tags)
+    net.train(train_dataloader, val_dataloader, pargs.epochs, tags, save_weight_path=pargs.save_path, start_save=pargs.start_save)
 
     # predict
     print(net.predict(test_dataloader, tags))

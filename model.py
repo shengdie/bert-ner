@@ -42,10 +42,11 @@ class model(object):
             self.b_model.cuda()
 
         self.total_epoch = 0
+        self.best_loss = 1e10
 
-    def train(self, train_dataloader, val_dataloader, epochs, tags, save_weight_path=None):
+    def train(self, train_dataloader, val_dataloader, epochs, tags, save_weight_path=None, start_save=3):
         total_ep = epochs + self.total_epoch
-        for i in range(self.total_epoch, self.total_epoch + epochs):
+        for i in range(self.total_epoch, total_ep):
             print('* Epoch {}/{}'.format(i+1, total_ep))
             start_time = time.time()
             self.b_model.train()
@@ -79,6 +80,11 @@ class model(object):
             print("Validation Accuracy: {}".format(ret_dic['accuracy']))
             print("F1-Score: {}".format(ret_dic['f1-score']))
             print('- Time elasped: {:.5f} seconds\n'.format(time.time() - start_time))
+            if save_weight_path is not None and ret_dic['loss'] < self.best_loss and i - total_ep + epochs + 1 >= start_save:
+                print('Saving weight...\n')
+                self.best_loss = ret_dic['loss']
+                self.save(save_weight_path)
+
             self.total_epoch += 1
 
     def predict(self, test_dataloader, tags):

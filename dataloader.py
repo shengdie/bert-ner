@@ -87,6 +87,7 @@ def load_data(train_data_path, test_data_path, vocab,
             test_size = temp_input.size()[0] - val_size
 
         test_dataset, val_dataset = random_split(temp_dataset, [test_size, val_size])
+    print('data size [train, test, val] = [{}, {}, {}]'.format(len(train_dataset), len(test_dataset), len(val_dataset)))
 
     train_sampler = RandomSampler(train_dataset)
     test_sampler = SequentialSampler(test_dataset)
