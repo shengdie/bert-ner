@@ -14,6 +14,9 @@ from help_func import f1_score
 
 class model(object):
     def __init__(self, config, ner_state_dict_path=None):
+        """ner_state_dict is whole weight of BertForTokenClassification, which contains BERT weight + classifier weight,
+        if it is not None, then pretrained bert weight will not be loaded.
+        """
         self.config = config
         b_conf = BertConfig.from_json_file(config.bert_conf_path)
         if ner_state_dict_path is None:

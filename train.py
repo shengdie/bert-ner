@@ -46,7 +46,7 @@ if __name__ == "__main__":
         save_path = os.path.join('model_save', time.strftime("%m-%d-%H-%M-%S", time.localtime()))
         os.makedirs(save_path)
         config.save(os.path.join(save_path, 'model_conf.json'))
-        weight_path = os.path.join(save_path, 'pytorch_weight')
+        weight_path = os.path.join(save_path, 'ner_weight')
         hist_path = os.path.join(save_path, 'history.txt')
     else:
         weight_path = None
