@@ -13,36 +13,39 @@ from help_func import f1_score
 
 
 class model(object):
-    def __init__(self, config):
+    def __init__(self, config, ner_state_dict_path=None):
         self.config = config
         b_conf = BertConfig.from_json_file(config.bert_conf_path)
-
-        tmp_d = torch.load(config.bert_weight_path, map_location='cpu')
-        
-        if len(tmp_d.keys()) > 201:
-            state_dict = OrderedDict()
-            for i in list(tmp_d.keys())[:199]:
-                x = i
-                if i.find('bert') > -1:
-                    x = '.'.join(i.split('.')[1:])
-                state_dict[x] = tmp_d[i]
-            #for i in list(tmp_d.keys())[:199]:
-            #    state_dict[i] = tmp_d[i]
-            # cls_weight = torch.Tensor(num_class, config.hidden_size)
-            # cls_bias = torch.Tensor(num_class)
-            # torch.nn.init.kaiming_uniform_(cls_weight, a=math.sqrt(5))
-            # fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(cls_weight)
-            # bound = 1 / math.sqrt(fan_in)
-            # torch.nn.init.uniform_(cls_bias, -bound, bound)
-        
-            # state_dict['classifier.weight'] = cls_weight
-            # state_dict['classifier.bias'] = cls_bias
+        if ner_state_dict_path is None:
+            tmp_d = torch.load(config.bert_weight_path, map_location='cpu')
+            
+            if len(tmp_d.keys()) > 201:
+                bert_state_dict = OrderedDict()
+                for i in list(tmp_d.keys())[:199]:
+                    x = i
+                    if i.find('bert') > -1:
+                        x = '.'.join(i.split('.')[1:])
+                    bert_state_dict[x] = tmp_d[i]
+                #for i in list(tmp_d.keys())[:199]:
+                #    state_dict[i] = tmp_d[i]
+                # cls_weight = torch.Tensor(num_class, config.hidden_size)
+                # cls_bias = torch.Tensor(num_class)
+                # torch.nn.init.kaiming_uniform_(cls_weight, a=math.sqrt(5))
+                # fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(cls_weight)
+                # bound = 1 / math.sqrt(fan_in)
+                # torch.nn.init.uniform_(cls_bias, -bound, bound)
+            
+                # state_dict['classifier.weight'] = cls_weight
+                # state_dict['classifier.bias'] = cls_bias
+            else:
+                bert_state_dict = tmp_d
         else:
-            state_dict = tmp_d
-
-        self.b_model = BertForTokenClassification(b_conf, len(config.idx2tag), state_dict)
-
+            bert_state_dict = None
         
+        self.b_model = BertForTokenClassification(b_conf, len(config.idx2tag), bert_state_dict=bert_state_dict)
+        if ner_state_dict_path is not None:
+            self.load(ner_state_dict_path)
+
         
         #self.b_model.load_state_dict(state_dict)
         self.optimizer = None
@@ -180,6 +183,8 @@ class model(object):
         if path is not None:
             hist = np.array([self.train_loss, self.val_loss, self.prec, self.recall, self.f1score])
             np.savetxt(path, hist.T, header='train loss, val loss, precision, recall, f1-score')
+    def load(self, path):
+        self.b_model.load_state_dict(torch.load(path, map_location='cpu'))
 
 
 

@@ -26,11 +26,12 @@ class BertForTokenClassification(nn.Module):
     logits = model(input_ids, token_type_ids, input_mask)
     ```
     """
-    def __init__(self, config, num_labels, bert_state_dict):
+    def __init__(self, config, num_labels, bert_state_dict=None):
         super().__init__()
         self.num_labels = num_labels
         self.bert = BertModel(config)
-        self.bert.load_state_dict(bert_state_dict)
+        if bert_state_dict is not None:
+            self.bert.load_state_dict(bert_state_dict)
         # we don't fine tune bert, it requires large GPU mem
         self.bert.eval()
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
