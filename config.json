@@ -1,0 +1,11 @@
+{
+  "data_path": "data/",
+  "vocab_path": "weights/pubmed_pmc_470k/vocab.txt",
+  "bert_weight_path": "weights/pytorch_weight",
+  "bert_conf_path": "weights/pubmed_pmc_470k/bert_config.json",
+  "tags_vocab": ["B-E", "B-P", "B-T", "I-E", "I-P", "I-T"],
+  "batch_size": 128, 
+  "num_epochs": 6,
+  "lr": 0.0005,
+  "lr_warmup": 0.1
+}

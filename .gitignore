@@ -5,3 +5,7 @@ pytorch_weight*
 __pycache__
 .syncthing*
 .ipynb_checkpoints/
+model_save/
+data_old/
+figure/
+*.ipynb

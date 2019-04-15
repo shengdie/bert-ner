@@ -17,7 +17,7 @@ def get_entities(seq, suffix=False):
         seq = [item for sublist in seq for item in sublist + ['O']]
 
     prev_tag = 'O'
-    prev_type = ''
+    prev_type = '<P>'
     begin_offset = 0
     chunks = []
     for i, chunk in enumerate(seq + ['O']):
@@ -28,12 +28,16 @@ def get_entities(seq, suffix=False):
             tag = chunk[0]
             type_ = chunk.split('-')[-1]
 
-        if end_of_chunk(prev_tag, tag, prev_type, type_):
+        if end_of_chunk(prev_tag, tag, prev_type, type_) and prev_type != '<P>':
             chunks.append((prev_type, begin_offset, i-1))
         if start_of_chunk(prev_tag, tag, prev_type, type_):
             begin_offset = i
         prev_tag = tag
         prev_type = type_
+        # if type_ != '<P>':
+        #     prev_type = type_ 
+        # elif prev_type == 'O':
+        #     prev_type = type_
 
     return chunks
 
@@ -60,7 +64,7 @@ def end_of_chunk(prev_tag, tag, prev_type, type_):
     if prev_tag == 'I' and tag == 'S': chunk_end = True
     if prev_tag == 'I' and tag == 'O': chunk_end = True
 
-    if prev_tag != 'O' and prev_tag != '.' and prev_type != type_:
+    if prev_tag != 'O' and prev_tag != '.' and prev_type != type_: #and type_ != '<P>':
         chunk_end = True
 
     return chunk_end
@@ -88,7 +92,7 @@ def start_of_chunk(prev_tag, tag, prev_type, type_):
     if prev_tag == 'O' and tag == 'E': chunk_start = True
     if prev_tag == 'O' and tag == 'I': chunk_start = True
 
-    if tag != 'O' and tag != '.' and prev_type != type_:
+    if tag != 'O' and tag != '.' and prev_type != type_: #and type_ != '<P>':
         chunk_start = True
 
     return chunk_start
@@ -124,4 +128,4 @@ def f1_score(y_true, y_pred, average='micro', suffix=False):
     r = nb_correct / nb_true if nb_true > 0 else 0
     score = 2 * p * r / (p + r) if p + r > 0 else 0
 
-    return score
+    return p, r, score

@@ -1,53 +1,48 @@
+import os
 import argparse
+import time
 import numpy as np
 from model import model
-from dataloader import load_data
+from torch.utils.data import DataLoader
+from dataloader import load_data, load_vocab, Config, pad_batch, NERDataSet
 
 if __name__ == "__main__":
-    vocab_path = 'weights/pubmed_pmc_470k/vocab.txt'
-    bert_conf_path = 'weights/pubmed_pmc_470k/bert_config.json'
-    bert_weight= 'weights/pytorch_weight'
-    train_data_path = 'data/data_BI.npy'
-    test_data_path = 'data/test_data_BI.npy'
-
+    config = Config('./config.json')
+    train_dataset = NERDataSet(os.path.join(config.data_path, 'train.tsv'), config)
+    test_dataset = NERDataSet(os.path.join(config.data_path, 'test.tsv'), config)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, collate_fn=pad_batch)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=False, collate_fn=pad_batch)
+    
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--train-size', '-ts', dest='train_size', type=int, default=-1,
-                        help='train data size')
-    parser.add_argument('--val-size', '-vs', dest='val_size', default='0.1',
-                        help='val data size')
-    parser.add_argument('--max-len', '-ml', dest='max_len', default=120, type=int,
-                        help='max len of the sequence')
-    parser.add_argument('--epochs', '-ep', dest='epochs', default=5, type=int,
-                        help='epochs')
-    parser.add_argument('--resplit', '-rs', dest='resplit', default=None,
-                        help='if not None, then resplit the datat to [train, test, validation]')
-    parser.add_argument('--save', '-s', dest='save_path', default=None,
-                        help='save the best weight in this path.')
-    parser.add_argument('--start-save', dest='start_save', default=3, type=int,
-                        help='start saving the weight after this epochs if save path is given.')                                         
-    parser.add_argument('--full-train', '-ft', dest='full_trainning', action='store_true',
-                        help='if fully train the whole model')                             
+    parser.add_argument('--epochs', '-ep', dest='epochs', default=None, type=int,
+                         help='epochs')
+    parser.add_argument('--batch-size', '-bs', dest='batch_size', default=None, type=int,
+                         help='batch size')
+    parser.add_argument('--save', '-s', dest='save', action='store_true',
+                         help='save the best weight')
+    parser.add_argument('--start_save', '-ss', dest='start_save', default=2, type=int,
+                         help='start save model after these epochs')                     
 
     pargs = parser.parse_args()
-    train_size = None if pargs.train_size < 0 else pargs.train_size
-    val_size = eval(pargs.val_size)
+    if pargs.epochs is not None:
+        config.num_epochs = pargs.epochs
+    if pargs.batch_size is not None:
+        config.batch_size = pargs.batch_size
+    if pargs.save:
+        if not os.path.exists('model_save'): os.makedirs('model_save')
+        save_path = os.path.join('model_save', time.strftime("%m-%d-%H-%M-%S", time.localtime()))
+        os.makedirs(save_path)
+        config.save(os.path.join(save_path, 'model_conf.json'))
+        weight_path = os.path.join(save_path, 'pytorch_weight')
+        hist_path = os.path.join(save_path, 'history.txt')
+    else:
+        weight_path = None
+        hist_path = None
 
-    classes = [0, 1, 2, 3, 4, 5, 6]
-    tags = ['O', 'B-E', 'B-P', 'B-T', 'I-E', 'I-P', 'I-T']
-    #classes = [tags['']]
-
-    idx2token = np.loadtxt(vocab_path, dtype='str')
-    vocab = {idx2token[i]:i for i in range(len(idx2token))}
-
-    train_dataloader, test_dataloader, val_dataloader = load_data(train_data_path, test_data_path, vocab, classes=classes, max_len=pargs.max_len,
-                                                                  train_size=train_size, val_size=val_size, resplit=eval(pargs.resplit))
     # new model
-    net = model(bert_conf_path, bert_weight, num_class=len(classes))
-    if pargs.full_trainning:
-        net.full_trainning(True)
+    net = model(config)
     
     # train
-    net.train(train_dataloader, val_dataloader, pargs.epochs, tags, save_weight_path=pargs.save_path, start_save=pargs.start_save)
-
-    # predict
-    print(net.predict(test_dataloader, tags))
+    net.train(train_dataloader, test_dataloader, config.num_epochs, config.idx2tag, save_weight_path=weight_path, start_save=pargs.start_save)
+    net.save_hist(hist_path)
+    
