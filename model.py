@@ -52,6 +52,7 @@ class model(object):
         
         #self.b_model.load_state_dict(state_dict)
         self.optimizer = None
+        self.optim_params = None
         self.finetune_bert(False) # default fix bert
         #self.optimizer = Adam(self.b_model.parameters(), lr = config.lr, weight_decay=0.01)
 
@@ -67,12 +68,12 @@ class model(object):
         self.recall = []
         self.prec = []
 
-    def train(self, train_dataloader, val_dataloader, epochs, tags, save_weight_path=None, start_save=3):
-        if self.optimizer is None:
-            lr = self.config.lr
-        else:
-            lr = self.optimizer.get_lr()
-        self.optimizer = BertAdam(self.b_model.parameters(), lr=lr, warmup=self.config.lr_warmup, t_total=len(train_dataloader) * epochs)
+    def train(self, train_dataloader, val_dataloader, epochs, tags, save_weight_path=None, start_save=3, lr=None):
+        if lr is None:
+            if self.optimizer is None:
+                lr = self.config.lr
+        if self.optimizer is None or lr is not None:        
+            self.optimizer = BertAdam(self.b_model.parameters(), lr=lr, warmup=self.config.lr_warmup, t_total=len(train_dataloader) * epochs)
         total_ep = epochs + self.total_epoch
 
         ebatches = len(train_dataloader) // 10
