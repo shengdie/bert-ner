@@ -41,8 +41,8 @@ class BertForTokenClassification(nn.Module):
         
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
-        with torch.no_grad():
-            sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        #with torch.no_grad():
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
         sequence_output = self.dropout(sequence_output)
         sequence_output, _ = self.rnn(sequence_output)
         sequence_output = self.dropout(sequence_output)

@@ -52,6 +52,7 @@ class model(object):
         
         #self.b_model.load_state_dict(state_dict)
         self.optimizer = None
+        self.finetune_bert(False) # default fix bert
         #self.optimizer = Adam(self.b_model.parameters(), lr = config.lr, weight_decay=0.01)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -161,6 +162,13 @@ class model(object):
         ret_dic['truth'] = valid_tags
         
         return ret_dic
+    
+    def finetune_bert(self, fineturn):
+        for params in self.b_model.parameters():
+                params.requires_grad = True
+        if not fineturn:
+            for params in self.b_model.bert.parameters():
+                params.requires_grad = False
 
     # def full_trainning(self, full_trainning, lr=1e-3):
     #     """If full_training, then train the classifier + BERT, else only train the classifier
