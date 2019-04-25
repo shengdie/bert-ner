@@ -164,12 +164,23 @@ class model(object):
         
         return ret_dic
     
-    def finetune_bert(self, fineturn):
-        for params in self.b_model.parameters():
-                params.requires_grad = True
+    def finetune_bert(self, fineturn, layers=None):
+        #for params in self.b_model.parameters():
+        #        params.requires_grad = True
         if not fineturn:
             for params in self.b_model.bert.parameters():
                 params.requires_grad = False
+        elif layers is not None:
+            nlen = len('encoder.layer.1.')
+            layer_name = ['encoder.layer.{}.'.format(i) if i < 10 else 'encoder.layer.{}'.format(i) for i in layers]
+            for n, p in self.b_model.bert.named_parameters():
+                if n[:nlen] in layer_name: 
+                    p.requires_grad = True
+                else:
+                    p.requires_grad = False
+
+
+
 
     # def full_trainning(self, full_trainning, lr=1e-3):
     #     """If full_training, then train the classifier + BERT, else only train the classifier
