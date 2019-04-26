@@ -177,6 +177,9 @@ class model(object):
                     p.requires_grad = True
                 else:
                     p.requires_grad = False
+        else:
+            for params in self.b_model.bert.parameters():
+                params.requires_grad = True
 
 
 
