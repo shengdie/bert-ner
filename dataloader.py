@@ -27,14 +27,24 @@ def pad_batch(batch, max_len=None, pad=0, idO=0):
     sents_len = [len(s) for s in sents]
     labels = [s[1].copy() for s in batch]
     #atts = [s[-1] for s in batch]
-    if max_len is None:
-        max_len = max(sents_len)
     atts = [None] * len(sents)
-    for i in range(len(sents)):
-        atts[i] = [1] * sents_len[i] + [0] * (max_len - sents_len[i])
-        sents[i].extend([pad] * (max_len - sents_len[i]))
-        labels[i].extend([idO] * (max_len - sents_len[i]))
-    
+    max_slen = max(sents_len)
+    if max_len is None: max_len = max_slen
+    if max_len >= max_slen:
+        for i in range(len(sents)):
+            atts[i] = [1] * sents_len[i] + [0] * (max_len - sents_len[i])
+            sents[i].extend([pad] * (max_len - sents_len[i]))
+            labels[i].extend([idO] * (max_len - sents_len[i]))
+    else:
+        for i in range(len(sents)):
+            if max_len >= sents_len[i]:
+                atts[i] = [1] * sents_len[i] + [0] * (max_len - sents_len[i])
+                sents[i].extend([pad] * (max_len - sents_len[i]))
+                labels[i].extend([idO] * (max_len - sents_len[i]))
+            else:
+                atts[i] = [1] * max_len
+                sents[i] = sents[i][:max_len]
+                labels[i] = labels[i][:max_len]
     return torch.LongTensor(sents), torch.LongTensor(labels), torch.LongTensor(atts)
 
 class Config(object):

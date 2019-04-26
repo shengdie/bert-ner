@@ -164,17 +164,16 @@ class model(object):
         
         return ret_dic
     
-    def finetune_bert(self, fineturn, layers=None):
-        #for params in self.b_model.parameters():
-        #        params.requires_grad = True
+    def finetune_bert(self, fineturn, layers=None, embed=False):
         if not fineturn:
             for params in self.b_model.bert.parameters():
                 params.requires_grad = False
-        elif layers is not None:
+        elif layers is not None or embed:
             nlen = len('encoder.layer.1.')
-            layer_name = ['encoder.layer.{}.'.format(i) if i < 10 else 'encoder.layer.{}'.format(i) for i in layers]
+            layer_name = ['encoder.layer.{}.'.format(i) if i < 10 else 'encoder.layer.{}'.format(i) for i in layers] if layers is not None else []
+            if embed: emb = ['embeddings.word_embeddings.weight']
             for n, p in self.b_model.bert.named_parameters():
-                if n[:nlen] in layer_name: 
+                if n[:nlen] in layer_name or n in emb: 
                     p.requires_grad = True
                 else:
                     p.requires_grad = False

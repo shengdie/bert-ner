@@ -10,6 +10,7 @@ if __name__ == "__main__":
     config = Config('./config.json')
     train_dataset = NERDataSet(os.path.join(config.data_path, 'train.tsv'), config)
     test_dataset = NERDataSet(os.path.join(config.data_path, 'test.tsv'), config)
+    padfn = lambda x: pad_batch(x, max_len=None)
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, collate_fn=pad_batch)
     test_dataloader = DataLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=False, collate_fn=pad_batch)
     
