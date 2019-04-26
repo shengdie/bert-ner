@@ -171,7 +171,7 @@ class model(object):
         elif layers is not None or embed:
             nlen = len('encoder.layer.1.')
             layer_name = ['encoder.layer.{}.'.format(i) if i < 10 else 'encoder.layer.{}'.format(i) for i in layers] if layers is not None else []
-            if embed: emb = ['embeddings.word_embeddings.weight']
+            emb = ['embeddings.word_embeddings.weight'] if embed else []
             for n, p in self.b_model.bert.named_parameters():
                 if n[:nlen] in layer_name or n in emb: 
                     p.requires_grad = True
