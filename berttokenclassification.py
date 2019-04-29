@@ -36,7 +36,7 @@ class BertForTokenClassification(nn.Module):
         self.bert.eval()
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         
-        self.rnn = nn.LSTM(bidirectional=True, num_layers=2, input_size=768, hidden_size=768//2, batch_first=True)
+        #self.rnn = nn.LSTM(bidirectional=True, num_layers=2, input_size=768, hidden_size=768//2, batch_first=True)
         self.classifier = nn.Linear(config.hidden_size, num_labels)
         
 
@@ -44,8 +44,8 @@ class BertForTokenClassification(nn.Module):
         #with torch.no_grad():
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
         sequence_output = self.dropout(sequence_output)
-        sequence_output, _ = self.rnn(sequence_output)
-        sequence_output = self.dropout(sequence_output)
+        #sequence_output, _ = self.rnn(sequence_output)
+        #sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
 
         if labels is not None:
