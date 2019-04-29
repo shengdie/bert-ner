@@ -129,3 +129,130 @@ def f1_score(y_true, y_pred, average='micro', suffix=False):
     score = 2 * p * r / (p + r) if p + r > 0 else 0
 
     return p, r, score
+
+
+
+# taken from https://github.com/chakki-works/seqeval/blob/master/seqeval/metrics/sequence_labeling.py
+def get_entities_p(seq, suffix=False):
+    """Gets entities from sequence.
+    Args:
+        seq (list): sequence of labels.
+    Returns:
+        list: list of (chunk_type, chunk_start, chunk_end).
+    Example:
+        >>> from seqeval.metrics.sequence_labeling import get_entities
+        >>> seq = ['B-PER', 'I-PER', 'O', 'B-LOC']
+        >>> get_entities(seq)
+        [('PER', 0, 1), ('LOC', 3, 3)]
+    """
+    # for nested list
+    if any(isinstance(s, list) for s in seq):
+        seq = [item for sublist in seq for item in sublist + ['O']]
+
+    prev_tag = 'O'
+    prev_type = 'O'
+    begin_offset = 0
+    chunks = []
+    for i, chunk in enumerate(seq + ['O']):
+        if suffix:
+            tag = chunk[-1]
+            type_ = chunk.split('-')[0]
+        else:
+            tag = chunk[0]
+            type_ = chunk.split('-')[-1]
+            
+        if type_ == '<P>':
+            if prev_type != 'O': type_ = prev_type
+
+        if end_of_chunk_p(prev_tag, tag, prev_type, type_) and prev_type != '<P>':
+            chunks.append((prev_type, begin_offset, i-1))
+        if start_of_chunk_p(prev_tag, tag, prev_type, type_):
+            begin_offset = i
+        if type_ != '<P>' or prev_tag == 'O':
+            prev_type = type_ 
+        #elif prev_type == 'O':
+        #    prev_type = type_
+        prev_tag = tag
+        #prev_type = type_
+        
+
+    return chunks
+
+
+def end_of_chunk_p(prev_tag, tag, prev_type, type_):
+    """Checks if a chunk ended between the previous and current word.
+    Args:
+        prev_tag: previous chunk tag.
+        tag: current chunk tag.
+        prev_type: previous type.
+        type_: current type.
+    Returns:
+        chunk_end: boolean.
+    """
+    chunk_end = False
+
+    #if prev_tag == 'E': chunk_end = True
+    #if prev_tag == 'S': chunk_end = True
+
+    #if prev_tag == 'B' and tag == 'B': chunk_end = True
+    #if prev_tag == 'B' and tag == 'S': chunk_end = True
+    if prev_tag == 'B' and tag == 'O': chunk_end = True
+    if prev_tag == 'I' and tag == 'B': chunk_end = True
+    #if prev_tag == 'I' and tag == 'S': chunk_end = True
+    if prev_tag == 'I' and tag == 'O': chunk_end = True
+
+    if prev_tag != 'O' and prev_tag != '.' and prev_type != type_: #and type_ != '<P>':
+        chunk_end = True
+
+    return chunk_end
+
+
+def start_of_chunk_p(prev_tag, tag, prev_type, type_):
+    """Checks if a chunk started between the previous and current word.
+    Args:
+        prev_tag: previous chunk tag.
+        tag: current chunk tag.
+        prev_type: previous type.
+        type_: current type.
+    Returns:
+        chunk_start: boolean.
+    """
+    chunk_start = False
+
+    if tag == 'B': chunk_start = True
+    #if tag == 'S': chunk_start = True
+
+    #if prev_tag == 'E' and tag == 'E': chunk_start = True
+    #if prev_tag == 'E' and tag == 'I': chunk_start = True
+    #if prev_tag == 'S' and tag == 'E': chunk_start = True
+    #if prev_tag == 'S' and tag == 'I': chunk_start = True
+    if prev_tag == 'O' and tag == 'E': chunk_start = True
+    if prev_tag == 'O' and tag == 'I' and type_ != '<P>': chunk_start = True
+
+    if tag != 'O' and tag != '.' and prev_type != type_ and type_ != '<P>':
+        chunk_start = True
+
+    return chunk_start
+
+def pair(*arg):
+    l = len(arg) 
+    pairs= []
+    for i in range(l):
+        for j in range(l-i-1):
+            pairs.append([arg[i], arg[i+j+1]])
+    return pairs
+
+def get_e(label):
+    p,s = 0,0
+    ck = []
+    for i, l in enumerate(label):  
+        if l - 3 != p and l != 1:
+            if i > s and p > 1:
+                ck.append((s,i))
+        if l -3 != p and l > 1:
+            s = i
+        if l != 1:
+            p = l -3 if l > 4 else l
+    if l > 1:
+        ck.append((i,i+1))    
+    return ck

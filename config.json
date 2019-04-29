@@ -1,11 +1,21 @@
 {
-  "data_path": "data/",
+  "data_path": "data_rel_all/",
   "vocab_path": "weights/pubmed_pmc_470k/vocab.txt",
   "bert_weight_path": "weights/pytorch_weight",
   "bert_conf_path": "weights/pubmed_pmc_470k/bert_config.json",
   "tags_vocab": ["B-E", "B-P", "B-T", "I-E", "I-P", "I-T"],
-  "batch_size": 128, 
-  "num_epochs": 6,
+  "batch_size": 32, 
+  "num_epochs_cls": 3,
+  "num_epochs_full": 3,
   "lr": 0.0005,
-  "lr_warmup": 0.1
+  "lr_warmup": 0.1,
+  "max_concept": 3,
+  "triu": true,
+  "inc_dig": false,
+  "inc_first": true,
+  "remove_non": 0.95,
+  "remove_one": 0.9,
+  "remove_no": 0.7,
+  "method": "ave",
+  "cls_num": 1
 }

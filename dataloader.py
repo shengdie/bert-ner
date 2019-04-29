@@ -5,16 +5,49 @@ import numpy as np
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler, random_split, Dataset
 from pytorch_pretrained_bert import BertTokenizer, BertConfig
 
-def load_tsv(path, cls='[CLS]', sep='[SEP]', add_cls=False, add_sep=False):
+def load_tsv(path, cls='[CLS]', sep='[SEP]', add_cls=False, add_sep=False, cls_num=1):
     """load tsv data"""
     with open(path, 'r') as f:
         sent_tags = f.read().strip().split('\n\n')
     sents, tags = [], []
     for s in sent_tags:
         st = [w.split() for w in s.splitlines()]
-        sents.append(([cls] if add_cls else []) + [w[0] for w in st if len(w) == 2] + ([sep] if add_sep else []))
-        tags.append((['O'] if add_cls else []) + [w[1] for w in st if len(w) == 2] + (['O'] if add_sep else []))
+        sents.append(([cls] * cls_num if add_cls else []) + [w[0] for w in st if len(w) == 2] + ([sep] if add_sep else []))
+        tags.append((['O'] * cls_num if add_cls else []) + [w[1] for w in st if len(w) == 2] + (['O'] if add_sep else []))
     return sents, tags
+
+def extract_num_concept(xx, yy, rr, num, remove_non=0, remove_one=0):
+    ne = 5 - num
+    nm = ne * 5 + ne * num
+    #nall = num ** 2
+    new_x, new_y, new_r = [], [], []
+    for x , y, r in zip(xx, yy, rr):
+        if remove_non > 0 and r.sum() == 0:
+            if np.random.random() > remove_non:
+                new_x.append(x)
+                new_y.append(y)
+                new_r.append(r[:num, :num])
+        elif remove_one > 0 and r.sum() == 1:
+            if np.random.random() > remove_one:
+                new_x.append(x)
+                new_y.append(y)
+                new_r.append(r[:num, :num])
+        elif (r[num:,:] == 0).sum() + (r[:num,num:] == 0).sum() == nm:
+            new_x.append(x)
+            new_y.append(y)
+            new_r.append(r[:num, :num])
+    return new_x, new_y, np.array(new_r)
+
+def load_relation(path):
+    return np.load(path)['arr_0'] +1
+
+def triu_relation(d, inc_dig=True, inc_first=False):
+    a = d[0].shape[0]
+    t1, t2 = np.triu_indices(a, 0) if inc_dig else np.triu_indices(a, 1)
+    if not inc_dig and inc_first:
+        t1 = np.insert(t1, 0, 0)
+        t2 = np.insert(t2, 0, 0) 
+    return d[:, t1, t2]
 
 def load_vocab(path):
     idx2token = np.loadtxt(path, dtype='str', comments=None)
@@ -26,15 +59,17 @@ def pad_batch(batch, max_len=None, pad=0, idO=0):
     sents = [s[0].copy() for s in batch]
     sents_len = [len(s) for s in sents]
     labels = [s[1].copy() for s in batch]
+    relations = [s[-1] for s in batch]
     #atts = [s[-1] for s in batch]
     atts = [None] * len(sents)
     max_slen = max(sents_len)
-    if max_len is None: max_len = max_slen
+    if max_len is None: 
+        max_len = max_slen
     if max_len >= max_slen:
         for i in range(len(sents)):
-            atts[i] = [1] * sents_len[i] + [0] * (max_len - sents_len[i])
-            sents[i].extend([pad] * (max_len - sents_len[i]))
-            labels[i].extend([idO] * (max_len - sents_len[i]))
+            atts[i] = [1] * sents_len[i] + [0] * (max_slen - sents_len[i])
+            sents[i].extend([pad] * (max_slen - sents_len[i]))
+            labels[i].extend([idO] * (max_slen - sents_len[i]))
     else:
         for i in range(len(sents)):
             if max_len >= sents_len[i]:
@@ -45,7 +80,7 @@ def pad_batch(batch, max_len=None, pad=0, idO=0):
                 atts[i] = [1] * max_len
                 sents[i] = sents[i][:max_len]
                 labels[i] = labels[i][:max_len]
-    return torch.LongTensor(sents), torch.LongTensor(labels), torch.LongTensor(atts)
+    return torch.LongTensor(sents), torch.LongTensor(labels), torch.LongTensor(atts), torch.LongTensor(relations)
 
 class Config(object):
     def __init__(self, config_json):
@@ -54,7 +89,7 @@ class Config(object):
             with open(config_json, 'r', encoding='utf-8') as f:
                 json_config = json.loads(f.read())
             assert all(v in json_config.keys() for v in ['data_path', 'vocab_path', 'tags_vocab', 
-                                                        'batch_size', 'num_epochs', 'lr', 'bert_weight_path', 'bert_conf_path', 'lr_warmup'])
+                                                        'batch_size', 'num_epochs_cls', 'lr', 'bert_weight_path', 'bert_conf_path', 'lr_warmup'])
             for key, value in json_config.items():
                 self.__dict__[key] = value
         else:
@@ -78,9 +113,19 @@ class Config(object):
             f.write(self.to_json_string())
 
 class NERDataSet(Dataset):
-    def __init__(self, data_path, config, add_cls=False, add_sep=False):
+    def __init__(self, data_path, relation_path, config, add_cls=True, add_sep=False):
         self.config = config
-        self.sents, self.tags = load_tsv(data_path, add_cls=add_cls, add_sep=add_sep)
+        self.relations = load_relation(relation_path).astype(int)#.tolist()
+        #print(self.relations)
+        #add_cls = True
+        self.sents, self.tags = load_tsv(data_path, add_cls=add_cls, add_sep=add_sep, cls_num=config.cls_num)
+        if config.max_concept <5 or config.remove_non > 0 or config.remove_one > 0:
+            self.sents, self.tags, self.relations = extract_num_concept(self.sents, self.tags, self.relations, config.max_concept, remove_non=config.remove_non, remove_one=config.remove_one)
+        # relation
+        #print(self.relations)
+        if config.triu:
+            self.relations = triu_relation(self.relations, config.inc_dig, config.inc_first)
+        
         self.tokenizer = BertTokenizer(vocab_file=config.vocab_path, do_lower_case=False)
         self.tokenize()
 
@@ -104,8 +149,95 @@ class NERDataSet(Dataset):
         self.tok_tags = alltok_tags
     
     def __getitem__(self, idx):
-        return self.tok_sents[idx], self.tok_tags[idx]
+        return self.tok_sents[idx], self.tok_tags[idx], self.relations[idx]
 
+class RelationDataSet(Dataset):
+    def __init__(self, data_path, config, add_cls=True, add_sep=True):
+        self.config = config
+        #self.relations = load_relation(data_path).astype(int)#.tolist()
+        #print(self.relations)
+        #add_cls = True
+        self.concepts, self.relations = load_pure_relations(data_path, add_cls=add_cls, add_sep=add_sep, remove_no=config.remove_no)
+        
+        self.tokenizer = BertTokenizer(vocab_file=config.vocab_path, do_lower_case=False)
+        self.tokenize()
+
+    def __len__(self):
+        return len(self.relations)
+
+    def tokenize(self):
+        cons, cons_types = [], []
+        for c1, c2 in self.concepts:
+            c1token, c2token = [], []
+            for w1 in c1:
+                w1token = self.tokenizer.tokenize(w1)
+                w1token_idx = self.tokenizer.convert_tokens_to_ids(w1token)
+                c1token.extend(w1token_idx)
+            for w2 in c2:
+                w2token = self.tokenizer.tokenize(w2)
+                w2token_idx = self.tokenizer.convert_tokens_to_ids(w2token)
+                c2token.extend(w2token_idx)
+            t = [0] * len(c1token) + [1] * len(c2token)
+            c1token.extend(c2token)
+            cons.append(c1token)
+            cons_types.append(t)
+            
+        self.concepts = cons
+        self.cons_types = cons_types
+    
+    def __getitem__(self, idx):
+        return self.concepts[idx], self.cons_types[idx], self.relations[idx]
+
+# def pad_batch_rels(batch, max_len=None, pad=0, idO=0):
+#     """pad a batch to max len of seq if max_len is None"""
+#     cons = [s[0].copy() for s in batch]
+#     cons_len = [len(s) for s in cons]
+#     cons_t = [s[1].copy() for s in batch]
+#     relations = [s[-1] for s in batch]
+#     #atts = [s[-1] for s in batch]
+#     atts = [None] * len(cons)
+#     max_slen = max(cons_len)
+#     if max_len is None: max_len = max_slen
+#     if max_len >= max_slen:
+#         for i in range(len(cons)):
+#             atts[i] = [1] * cons_len[i] + [0] * (max_len - cons_len[i])
+#             cons[i].extend([pad] * (max_len - cons_len[i]))
+#             cons_t[i].extend([idO] * (max_len - cons_len[i]))
+#     else:
+#         for i in range(len(cons)):
+#             if max_len >= cons_len[i]:
+#                 atts[i] = [1] * cons_len[i] + [0] * (max_len - cons_len[i])
+#                 cons[i].extend([pad] * (max_len - cons_len[i]))
+#                 cons_t[i].extend([idO] * (max_len - cons_len[i]))
+#             else:
+#                 atts[i] = [1] * max_len
+#                 cons[i] = cons[i][:max_len]
+#                 cons_t[i] = labels[i][:max_len]
+#     return torch.LongTensor(sents), torch.LongTensor(labels), torch.LongTensor(atts), torch.LongTensor(relations)
+
+def load_pure_relations(file, cls='[CLS]', sep='[SEP]', add_cls=False, add_sep=False, remove_no=0):
+    with open(file, 'r') as f:
+        l = f.read()
+    instances = l.split('\n\n')
+    concept_pair, rels = [], []
+    for ins in instances:
+        c1,c2, r = ins.split('\n')
+        r = int(r)
+        c1 = c1.split()
+        c2 = c2.split()
+        #t = [0] * len(c1) + [1] * len(c2)
+        if add_cls: c1.insert(0, cls)
+        if add_sep: c1.append(sep)
+        if remove_no > 0 and r == 1:
+            if np.random.random() > remove_no:
+                concept_pair.append([c1, c2])
+                #type_idx.append(t)
+                rels.append(r)
+        else:
+            concept_pair.append([c1, c2])
+                #type_idx.append(t)
+            rels.append(r)
+    return concept_pair, rels
 
 def process_data(raw_txts, raw_labels, vocab, max_len=120, pad='[PAD]', unk='[UNK]', cls='[CLS]', add_cls=False, classes=[0,1,2,3]):
     id_pad = vocab[pad]
@@ -125,7 +257,9 @@ def process_data(raw_txts, raw_labels, vocab, max_len=120, pad='[PAD]', unk='[UN
 
 def get_numpy_dump(data):
     if type(data) is np.lib.npyio.NpzFile:
-        return data[list(data)[0]].item()
+        d = data[list(data)[0]]
+        if type(d) is np.ndarray: return d
+        return d.item()
     else:
         return data.item()
 

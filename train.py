@@ -8,11 +8,13 @@ from dataloader import load_data, load_vocab, Config, pad_batch, NERDataSet
 
 if __name__ == "__main__":
     config = Config('./config.json')
-    train_dataset = NERDataSet(os.path.join(config.data_path, 'train.tsv'), config)
-    test_dataset = NERDataSet(os.path.join(config.data_path, 'test.tsv'), config)
-    padfn = lambda x: pad_batch(x, max_len=None)
-    train_dataloader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, collate_fn=pad_batch)
-    test_dataloader = DataLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=False, collate_fn=pad_batch)
+    #config.inc_dig = True
+    print(config.inc_dig)
+    train_dataset = NERDataSet(os.path.join(config.data_path, 'train.tsv'), os.path.join(config.data_path, 'train_rel.npz'), config )
+    test_dataset = NERDataSet(os.path.join(config.data_path, 'test.tsv'), os.path.join(config.data_path, 'train_rel.npz'), config )
+    padfn = lambda x: pad_batch(x, max_len=75)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, collate_fn=padfn)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=False, collate_fn=padfn)
     
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--epochs', '-ep', dest='epochs', default=None, type=int,
@@ -58,6 +60,9 @@ if __name__ == "__main__":
     net = model(config, ner_state_dict_path=pargs.ner_weight)
     
     # train
-    net.train(train_dataloader, test_dataloader, config.num_epochs, config.idx2tag, save_weight_path=weight_path, start_save=pargs.start_save)
+    net.train(train_dataloader, test_dataloader, config.num_epochs_cls, config.idx2tag, save_weight_path=weight_path, start_save=pargs.start_save)
+    net.finetune_bert(True)
+    net.train(train_dataloader, test_dataloader, config.num_epochs_full, 
+          config.idx2tag, save_weight_path=weight_path, start_save=1, lr=0.0001)
     net.save_hist(hist_path)
     

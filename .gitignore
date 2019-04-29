@@ -7,6 +7,7 @@ __pycache__
 .ipynb_checkpoints/
 model_save/
 data_old/
+data*/
 figure/
 *.ipynb
 *.tar.*
