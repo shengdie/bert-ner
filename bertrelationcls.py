@@ -55,11 +55,12 @@ class BertForTokenClassification(nn.Module):
 
         self.rnn = nn.LSTM(bidirectional=True, num_layers=2,
                            input_size=768, hidden_size=768//2, batch_first=True)
-        self.transformer = Transformer(rel_bert_conf)
+        #self.transformer = Transformer(rel_bert_conf)
 
         self.classifier = nn.Linear(bert_config.hidden_size, self.num_labels)
         
         self.relation = nn.Linear(bert_config.hidden_size, relnum*10)
+        self.relnum = relnum
         #self.s1 = Parameter(torch.tensor(1.0))
         #self.s2 = Parameter(torch.tensor(1.0))
         #self.relation = PoolerClassifier(rel_bert_conf.hidden_size, 10, cls_token_num=config.cls_num)
@@ -67,7 +68,7 @@ class BertForTokenClassification(nn.Module):
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, relations=None):
         # with torch.no_grad():
-        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        sequence_output, pooler = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
         sequence_output = self.dropout(sequence_output)
 
         
@@ -80,9 +81,9 @@ class BertForTokenClassification(nn.Module):
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
 
-        plabel = torch.argmax(logits, -1)
+        #plabel = torch.argmax(logits, -1)
         #plabel = plabel.masked_fill(attention_mask == 0, 0)
-        _, pooler = self.transformer(sequence_output, plabel, attention_mask)
+        #_, pooler = self.transformer(sequence_output, plabel, attention_mask)
 
         pooler = self.dropout(pooler)
            
@@ -92,6 +93,7 @@ class BertForTokenClassification(nn.Module):
         #loss = torch.tensor(0.).cuda()
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
+            attention_mask[:,0] = 0
 
             # Only keep active parts of the loss
             if attention_mask is not None:
@@ -106,15 +108,18 @@ class BertForTokenClassification(nn.Module):
             #if relations is not None:
             #plabel = torch.argmax(logits, -1)
         
-            _, pooler = self.transformer(sequence_output, labels, attention_mask)
+            # _, pooler = self.transformer(sequence_output, labels, attention_mask)
 
-            pooler = self.dropout(pooler)
+            # pooler = self.dropout(pooler)
             
-            #print(sequence_output.size())
-            rout = self.relation(pooler)
+            # #print(sequence_output.size())
+            # rout = self.relation(pooler)
             loss_fctr = nn.CrossEntropyLoss()
             #print(loss)
-            loss2 = loss_fctr(rout.view(-1, 10), relations.view(-1))
+            mask = relations > 0
+            loss2 = loss_fctr(rout.view(-1, self.relnum, 10)[mask], relations[mask])
+            #
+            #loss2 = loss_fctr(rout.view(-1, 10), relations.view(-1))
             #print(loss)
             #loss = self.s1 * loss1 + self.s2 * loss2 + (self.s1 - 1.0)**2 + (self.s2 - 1.5)**2
             loss = loss1 + loss2
@@ -123,14 +128,14 @@ class BertForTokenClassification(nn.Module):
         #    loss_fct = nn.CrossEntropyLoss()
         #    loss = loss_fct(rout.view(-1, 10), relations.view(-1))
         #    return loss
-        else:
-            plabel = torch.argmax(logits, -1)
-        #plabel = plabel.masked_fill(attention_mask == 0, 0)
-            _, pooler = self.transformer(sequence_output, plabel, attention_mask)
+        # else:
+        #     plabel = torch.argmax(logits, -1)
+        # #plabel = plabel.masked_fill(attention_mask == 0, 0)
+        #     _, pooler = self.transformer(sequence_output, plabel, attention_mask)
 
-            pooler = self.dropout(pooler)
+        #     pooler = self.dropout(pooler)
             
-            #print(sequence_output.size())
-            rout = self.relation(pooler)
+        #     #print(sequence_output.size())
+        #     rout = self.relation(pooler)
 
         return logits, rout

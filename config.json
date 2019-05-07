@@ -12,10 +12,10 @@
   "max_concept": 3,
   "triu": true,
   "inc_dig": false,
-  "inc_first": true,
+  "inc_first": false,
   "remove_non": 0.95,
   "remove_one": 0.9,
   "remove_no": 0.7,
-  "method": "ave",
+  "method": "pair",
   "cls_num": 1
 }

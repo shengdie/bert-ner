@@ -55,7 +55,7 @@ class BertForTokenClassification(nn.Module):
         sequence_output = self.dropout(sequence_output)
         #rout = self.relation(sequence_output[:, 0, :])
         tags_output, _ = self.rnn(sequence_output)
-        tags_output = self.dropout(sequence_output)
+        tags_output = self.dropout(tags_output)
         logits = self.classifier(tags_output)
         #torch.argmax(logits, dim=)
         #plabel = torch.argmax(logits, -1)
@@ -72,7 +72,7 @@ class BertForTokenClassification(nn.Module):
         #loss = torch.tensor(0.).cuda()
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
-
+            attention_mask[:,0] = 0
             # Only keep active parts of the loss
             if attention_mask is not None:
                 active_loss = attention_mask.view(-1) == 1
@@ -86,23 +86,25 @@ class BertForTokenClassification(nn.Module):
             #if relations is not None:
             #label_tags = [self.idx2tag(l) for l in (l > 0)]
            # plabel = labels.masked_fill(attention_mask == 0, 0) > 1
-            plabel = labels.unsqueeze(-1) #> 0
-            sequence_output = tags_output.masked_fill(plabel == False, 0).sum(dim=1)
+            plabel = labels.unsqueeze(-1) > 1
+            sequence_output = sequence_output.masked_fill(plabel == False, 0).sum(dim=1)
             plabel = plabel.sum(dim=1)
             plabel = plabel.masked_fill(plabel == 0, 1)
             sequence_output = sequence_output / plabel.float()
             rout = self.relation(sequence_output)
 
             loss_fctr = nn.CrossEntropyLoss()
+            mask = relations > 0
+            loss += loss_fctr(rout.view(-1, self.relnum, 10)[mask], relations[mask])
 
-            loss += loss_fctr(rout.view(-1, 10), relations.view(-1))
+            #loss += loss_fctr(rout.view(-1, 10), relations.view(-1))
             return loss
         else:
             plabel = torch.argmax(logits, -1)
             plabel = plabel.masked_fill(attention_mask == 0, 0) > 1
             plabel = plabel.unsqueeze(-1)
             
-            sequence_output = tags_output.masked_fill(plabel == False, 0).sum(dim=1)# / plabel.sum(dim=1)
+            sequence_output = sequence_output.masked_fill(plabel == False, 0).sum(dim=1)# / plabel.sum(dim=1)
             plabel = plabel.sum(dim=1)
             plabel = plabel.masked_fill(plabel == 0, 1)
             sequence_output = sequence_output / plabel.float()
