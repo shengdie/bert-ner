@@ -1,5 +1,5 @@
 {
-  "data_path": "data/",
+  "data_path": "data_rel_all/",
   "vocab_path": "weights/pubmed_pmc_470k/vocab.txt",
   "bert_weight_path": "weights/pytorch_weight",
   "bert_conf_path": "weights/pubmed_pmc_470k/bert_config.json",

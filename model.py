@@ -67,6 +67,10 @@ class model(object):
         self.f1score = []
         self.recall = []
         self.prec = []
+        self.train_time = []
+        self.record = {'train_loss': self.train_loss, 'val_loss': self.val_loss, 
+                        'ner_f1score': self.f1score, 'ner_recall': self.recall, 'ner_prec': self.prec, 'train_time': self.train_time}
+        
 
     def train(self, train_dataloader, val_dataloader, epochs, tags, save_weight_path=None, start_save=3, lr=None):
         if lr is None:
@@ -75,7 +79,7 @@ class model(object):
         if self.optimizer is None or lr is not None:        
             self.optimizer = BertAdam(self.b_model.parameters(), lr=lr, warmup=self.config.lr_warmup, t_total=len(train_dataloader) * epochs)
         total_ep = epochs + self.total_epoch
-
+        #train_time = []
         ebatches = len(train_dataloader) // 10
         for i in range(self.total_epoch, total_ep):
             print('* [Epoch {}/{}]'.format(i+1, total_ep))
@@ -102,8 +106,8 @@ class model(object):
                     pbar.update(1)
                     if step % ebatches == 0:
                         pbar.write("Step [{}/{}] train loss: {}".format(step, len(train_dataloader), loss.item()))
-
-            print('- Time elasped: {:.5f} seconds\n'.format(time.time() - start_time))
+            self.train_time.append(time.time() - start_time)
+            print('- Time elasped: {:.5f} seconds\n'.format(self.train_time[-1]))
             # VALIDATION on validation set
             print('========== * Evaluating * ===========')
             ret_dic = self.predict(val_dataloader, tags)
@@ -124,6 +128,9 @@ class model(object):
             self.prec.append(ret_dic['prec'])
 
             self.total_epoch += 1
+        self.train_time_epoch = sum(self.train_time) / len(self.train_time)
+        self.record['train_time_epoch'] = self.train_time_epoch
+        self.record['dataset_size'] = len(train_dataloader) * self.config.batch_size
 
     def predict(self, test_dataloader, tags):
         self.b_model.eval()

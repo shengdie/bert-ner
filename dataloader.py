@@ -9,11 +9,13 @@ def load_tsv(path, cls='[CLS]', sep='[SEP]', add_cls=False, add_sep=False):
     """load tsv data"""
     with open(path, 'r') as f:
         sent_tags = f.read().strip().split('\n\n')
+        #print(sent_tags[-1])
     sents, tags = [], []
     for s in sent_tags:
         st = [w.split() for w in s.splitlines()]
-        sents.append(([cls] if add_cls else []) + [w[0] for w in st if len(w) == 2] + ([sep] if add_sep else []))
-        tags.append((['O'] if add_cls else []) + [w[1] for w in st if len(w) == 2] + (['O'] if add_sep else []))
+        if len(st[0]) ==2:
+            sents.append(([cls] if add_cls else []) + [w[0] for w in st if len(w) == 2] + ([sep] if add_sep else []))
+            tags.append((['O'] if add_cls else []) + [w[1] for w in st if len(w) == 2] + (['O'] if add_sep else []))
     return sents, tags
 
 def load_vocab(path):
@@ -48,19 +50,19 @@ def pad_batch(batch, max_len=None, pad=0, idO=0):
     return torch.LongTensor(sents), torch.LongTensor(labels), torch.LongTensor(atts)
 
 class Config(object):
-    def __init__(self, config_json):
+    def __init__(self, config_json, wordpiece=True):
         """json should contain data_path, vocab_path, tags_vocab, batch_size, num_epochs, lr, bert_weight_path, bert_conf_path"""
         if isinstance(config_json, str):
             with open(config_json, 'r', encoding='utf-8') as f:
                 json_config = json.loads(f.read())
-            assert all(v in json_config.keys() for v in ['data_path', 'vocab_path', 'tags_vocab', 
-                                                        'batch_size', 'num_epochs', 'lr', 'bert_weight_path', 'bert_conf_path', 'lr_warmup'])
+            #assert all(v in json_config.keys() for v in ['data_path', 'vocab_path', 'tags_vocab', 
+            #                                            'batch_size', 'num_epochs', 'lr', 'bert_weight_path', 'bert_conf_path', 'lr_warmup'])
             for key, value in json_config.items():
                 self.__dict__[key] = value
         else:
             raise ValueError('Must be str path of config')
         #
-        self.idx2tag = ['O', 'I-<P>'] + [t for t in self.tags_vocab]
+        self.idx2tag = (['O', 'I-<P>'] if wordpiece else ['O']) + [t for t in self.tags_vocab]
         self.tag2idx = {v:i for i, v in enumerate(self.idx2tag)}
         self.piece_tag = 'I-<P>'
   
