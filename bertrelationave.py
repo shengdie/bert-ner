@@ -42,8 +42,8 @@ class BertForTokenClassification(nn.Module):
         #self.bert.eval()
         self.dropout = nn.Dropout(bert_config.hidden_dropout_prob)
 
-        self.rnn = nn.LSTM(bidirectional=True, num_layers=2,
-                           input_size=768, hidden_size=768//2, batch_first=True)
+        #self.rnn = nn.LSTM(bidirectional=True, num_layers=2,
+        #                   input_size=768, hidden_size=768//2, batch_first=True)
         self.classifier = nn.Linear(bert_config.hidden_size, self.num_labels)
         self.relnum = relnum
         self.relation = nn.Linear(bert_config.hidden_size, relnum * 10)
@@ -54,9 +54,9 @@ class BertForTokenClassification(nn.Module):
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
         sequence_output = self.dropout(sequence_output)
         #rout = self.relation(sequence_output[:, 0, :])
-        tags_output, _ = self.rnn(sequence_output)
-        tags_output = self.dropout(tags_output)
-        logits = self.classifier(tags_output)
+        #tags_output, _ = self.rnn(sequence_output)
+        #tags_output = self.dropout(tags_output)
+        logits = self.classifier(sequence_output)
         #torch.argmax(logits, dim=)
         #plabel = torch.argmax(logits, -1)
         #plabel = plabel.masked_fill(attention_mask == 0, 0) > 1
@@ -95,7 +95,8 @@ class BertForTokenClassification(nn.Module):
 
             loss_fctr = nn.CrossEntropyLoss()
             mask = relations > 0
-            loss += loss_fctr(rout.view(-1, self.relnum, 10)[mask], relations[mask])
+            if len(relations[mask]) > 0:
+                loss += loss_fctr(rout.view(-1, self.relnum, 10)[mask], relations[mask])
 
             #loss += loss_fctr(rout.view(-1, 10), relations.view(-1))
             return loss

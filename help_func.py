@@ -242,17 +242,40 @@ def pair(*arg):
             pairs.append([arg[i], arg[i+j+1]])
     return pairs
 
+# def get_e(label):
+#     p,s = 0,0
+#     ck = []
+#     for i, l in enumerate(label):  
+#         if l - 3 != p and l != 1:
+#             if i > s and p > 1:
+#                 ck.append((s,i))
+#         if l -3 != p and l > 1:
+#             s = i
+#         if l != 1:
+#             p = l -3 if l > 4 else l
+#     if l > 1:
+#         ck.append((i,i+1))    
+#     return ck
+
+def sc(p, c):
+    if c != 1:
+        ct = c -3 if c > 4 else c
+    else:
+        ct = p
+    return (c > 1 and c < 5) or (ct != p and ct > 0) # (c is 2, 3, 4, B-*, must new start) or c_type != prev type, and ct is not 'o'
+def ec(p, c):
+    if c != 1:
+        ct = c -3 if c > 4 else c
+    else:
+        ct = p
+    if p > 1: return (c >1 and c < 5) or (ct != p) # pre is type (c is 2, 3, 4, B-*,) or ctype != ptype
 def get_e(label):
-    p,s = 0,0
-    ck = []
-    for i, l in enumerate(label):  
-        if l - 3 != p and l != 1:
-            if i > s and p > 1:
-                ck.append((s,i))
-        if l -3 != p and l > 1:
-            s = i
-        if l != 1:
-            p = l -3 if l > 4 else l
-    if l > 1:
-        ck.append((i,i+1))    
-    return ck
+    p, c = 0,0
+    s = 0
+    chk = []
+    for i, c in enumerate(label):
+        if ec(p, c): chk.append((s,i))
+        if sc(p, c): s = i
+        if c != 1: p = c -3 if c > 4 else c
+    if ec(p, 0): chk.append((s, i+1)) # count final chunk
+    return chk

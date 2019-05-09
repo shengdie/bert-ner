@@ -58,8 +58,10 @@ class model(object):
             from bertrelationbert import BertForTokenClassification
         elif config.method == 'ave':
             from bertrelationave import BertForTokenClassification
-        elif config.method == 'pair':
+        elif config.method == 'pair_ave':
             from bertrelationpair import BertForTokenClassification
+        elif config.method == 'pair_transformer':
+            from bertrelationpairtransformer import BertForTokenClassification
         
         self.b_model = BertForTokenClassification(config, self.relnum, bert_state_dict=bert_state_dict)
         if ner_state_dict_path is not None:
@@ -84,6 +86,12 @@ class model(object):
         self.recall = []
         self.prec = []
         self.rel_acc = []
+        self.rel_acc_r = []
+        self.train_time = []
+        self.record = {'train_loss': self.train_loss, 'val_loss': self.val_loss, 
+                        'ner_f1score': self.f1score, 'ner_recall': self.recall, 
+                        'ner_prec': self.prec, 'train_time': self.train_time, 
+                        'rel_acc': self.rel_acc, 'rel_acc_r': self.rel_acc_r}
 
     def train(self, train_dataloader, val_dataloader, epochs, tags, save_weight_path=None, start_save=3, lr=None):
         if lr is None:
@@ -119,8 +127,8 @@ class model(object):
                     pbar.update(1)
                     if step % ebatches == 0:
                         pbar.write("Step [{}/{}] train loss: {}".format(step, len(train_dataloader), loss.item()))
-
-            print('- Time elasped: {:.5f} seconds\n'.format(time.time() - start_time))
+            self.train_time.append(time.time() - start_time)
+            print('- Time elasped: {:.5f} seconds\n'.format(self.train_time[-1]))
             # VALIDATION on validation set
             print('========== * Evaluating * ===========')
             ret_dic = self.predict(val_dataloader, tags)
@@ -129,7 +137,7 @@ class model(object):
             print("Validation precision: {}".format(ret_dic['prec']))
             print("F1-Score: {}".format(ret_dic['f1-score']))
             print('Relation acc: {}'.format(ret_dic['rel_acc']))
-            print('Relation raw acc: {}\n'.format(ret_dic['raw_rel_acc']))
+            print('Relation acc with r: {}\n'.format(ret_dic['rel_acc_withr']))
             
             if ret_dic['f1-score'] > self.best_f1score:
                 self.best_f1score = ret_dic['f1-score']
@@ -142,8 +150,11 @@ class model(object):
             self.recall.append(ret_dic['recall'])
             self.prec.append(ret_dic['prec'])
             self.rel_acc.append(ret_dic['rel_acc'])
+            self.rel_acc_r.append(ret_dic['rel_acc_withr'])
 
             self.total_epoch += 1
+        self.record['train_time_epoch'] = sum(self.train_time) /len(self.train_time)
+        self.record['dataset_size'] = len(train_dataloader) * self.config.batch_size
 
     def predict(self, test_dataloader, tags):
         self.b_model.eval()
@@ -191,14 +202,19 @@ class model(object):
         #eval_loss = eval_loss/nb_eval_steps
         pred_tags = [[tags[pi] for pi in p] for p in predictions]
         valid_tags = [[tags[li] for li in l] for l in true_labels]
-        #print(relations_true, none_z)
-        #sreturn relations_pred, relations_true, none_z
+        
+        # relation accuray with no relation
         rel_acc = np.array([[(p[m] == t[m]).sum(), m.sum()] for p, t, m in zip(relations_pred, relations_true, none_z)])
         rel_acc = rel_acc[:,0].sum() / rel_acc[:,1].sum()
+        # for relation accuray without relation
+        relations_pred = np.array(relations_pred) 
+        relations_true = np.array(relations_true)
+        mask = relations_true > 1
+        
         #ret_dic['loss'] = eval_loss
         ret_dic['prec'], ret_dic['recall'], ret_dic['f1-score'] = f1_score(valid_tags, pred_tags)
         ret_dic['rel_acc'] = rel_acc
-        ret_dic['raw_rel_acc'] = np.average((np.array(relations_pred) == np.array(relations_true)))
+        ret_dic['rel_acc_withr'] = (relations_pred[mask] == relations_true[mask]).mean()
         ret_dic['relat_pred'] = relations_pred
         ret_dic['relat_true'] = relations_true
         ret_dic['pred'] = pred_tags

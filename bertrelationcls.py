@@ -40,21 +40,9 @@ class BertForTokenClassification(nn.Module):
         # we don't fine tune bert, it requires large GPU mem
         #self.bert.eval()
         self.dropout = nn.Dropout(bert_config.hidden_dropout_prob)
-        rel_bert_conf = BertConfig.from_dict({
-                                            "attention_probs_dropout_prob": 0.1,
-                                            "hidden_act": "gelu",
-                                            "hidden_dropout_prob": 0.1,
-                                            "hidden_size": 768,
-                                            "initializer_range": 0.02,
-                                            "intermediate_size": 3072,
-                                            "max_position_embeddings": 512,
-                                            "num_attention_heads": 12,
-                                            "num_hidden_layers": 1,
-                                            "type_vocab_size": self.num_labels,
-                                            "vocab_size": 28996})
 
-        self.rnn = nn.LSTM(bidirectional=True, num_layers=2,
-                           input_size=768, hidden_size=768//2, batch_first=True)
+        #self.rnn = nn.LSTM(bidirectional=True, num_layers=2,
+        #                   input_size=768, hidden_size=768//2, batch_first=True)
         #self.transformer = Transformer(rel_bert_conf)
 
         self.classifier = nn.Linear(bert_config.hidden_size, self.num_labels)
@@ -73,12 +61,13 @@ class BertForTokenClassification(nn.Module):
 
         
         
-        sequence_output, _ = self.rnn(sequence_output)
+        #sequence_output, _ = self.rnn(sequence_output)
+        #sequence_output = self.dropout(sequence_output)
         #sequence_output, _ = self.rnn(sequence_output, token_type_ids, attention_mask)
         
         #rout = self.relation(sequence_output)
         
-        sequence_output = self.dropout(sequence_output)
+        
         logits = self.classifier(sequence_output)
 
         #plabel = torch.argmax(logits, -1)
@@ -100,10 +89,10 @@ class BertForTokenClassification(nn.Module):
                 active_loss = attention_mask.view(-1) == 1
                 active_logits = logits.view(-1, self.num_labels)[active_loss]
                 active_labels = labels.view(-1)[active_loss]
-                loss1 = loss_fct(active_logits, active_labels)
+                loss = loss_fct(active_logits, active_labels)
                 #loss = torch.argmax(logits, -1) > 0
             else:
-                loss1 = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             # return loss
             #if relations is not None:
             #plabel = torch.argmax(logits, -1)
@@ -117,12 +106,15 @@ class BertForTokenClassification(nn.Module):
             loss_fctr = nn.CrossEntropyLoss()
             #print(loss)
             mask = relations > 0
-            loss2 = loss_fctr(rout.view(-1, self.relnum, 10)[mask], relations[mask])
+            #print(relations.size())
+            #print(rout.size())
+            if len(relations[mask]) > 0:
+                loss += loss_fctr(rout.view(-1, self.relnum, 10)[mask], relations[mask])
             #
             #loss2 = loss_fctr(rout.view(-1, 10), relations.view(-1))
             #print(loss)
             #loss = self.s1 * loss1 + self.s2 * loss2 + (self.s1 - 1.0)**2 + (self.s2 - 1.5)**2
-            loss = loss1 + loss2
+            #loss = loss1 + loss2
             return loss
         #elif relations is not None:
         #    loss_fct = nn.CrossEntropyLoss()

@@ -41,7 +41,7 @@ def extract_num_concept(xx, yy, rr, num, remove_non=0, remove_one=0):
 def load_relation(path):
     return np.load(path)['arr_0'] +1
 
-def triu_relation(d, inc_dig=True, inc_first=False):
+def triu_relation(d, inc_dig=False, inc_first=False):
     a = d[0].shape[0]
     t1, t2 = np.triu_indices(a, 0) if inc_dig else np.triu_indices(a, 1)
     if not inc_dig and inc_first:
@@ -88,8 +88,8 @@ class Config(object):
         if isinstance(config_json, str):
             with open(config_json, 'r', encoding='utf-8') as f:
                 json_config = json.loads(f.read())
-            assert all(v in json_config.keys() for v in ['data_path', 'vocab_path', 'tags_vocab', 
-                                                        'batch_size', 'num_epochs_cls', 'lr', 'bert_weight_path', 'bert_conf_path', 'lr_warmup'])
+            #assert all(v in json_config.keys() for v in ['data_path', 'vocab_path', 'tags_vocab', 
+            #                                            'batch_size', 'num_epochs_cls', 'lr', 'bert_weight_path', 'bert_conf_path', 'lr_warmup'])
             for key, value in json_config.items():
                 self.__dict__[key] = value
         else:
