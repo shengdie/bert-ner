@@ -113,12 +113,12 @@ class Config(object):
             f.write(self.to_json_string())
 
 class NERDataSet(Dataset):
-    def __init__(self, data_path, relation_path, config, add_cls=True, add_sep=False):
+    def __init__(self, data_path, relation_path, config):
         self.config = config
         self.relations = load_relation(relation_path).astype(int)#.tolist()
         #print(self.relations)
         #add_cls = True
-        self.sents, self.tags = load_tsv(data_path, add_cls=add_cls, add_sep=add_sep, cls_num=config.cls_num)
+        self.sents, self.tags = load_tsv(data_path, add_cls=config.add_cls, add_sep=config.add_sep, cls_num=config.cls_num)
         if config.max_concept <5 or config.remove_non > 0 or config.remove_one > 0:
             self.sents, self.tags, self.relations = extract_num_concept(self.sents, self.tags, self.relations, config.max_concept, remove_non=config.remove_non, remove_one=config.remove_one)
         # relation

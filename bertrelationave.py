@@ -72,7 +72,7 @@ class BertForTokenClassification(nn.Module):
         #loss = torch.tensor(0.).cuda()
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
-            attention_mask[:,0] = 0
+            if self.config.add_cls: attention_mask[:,0] = 0
             # Only keep active parts of the loss
             if attention_mask is not None:
                 active_loss = attention_mask.view(-1) == 1

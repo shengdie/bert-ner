@@ -182,6 +182,8 @@ class model(object):
             nonez = rels_true != 0
             if self.config.inc_first:
                 nonez[:, 0] = False
+            if self.config.add_cls:
+                mask[:,0] = False
             #(rels_pred[nonez] == rels_true[nonez]).sum() / nonez.sum()
             relations_pred.extend(rels_pred)
             relations_true.extend(rels_true)

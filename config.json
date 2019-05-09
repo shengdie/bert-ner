@@ -17,5 +17,7 @@
   "remove_one": 0,
   "remove_no": 0,
   "method": "pair_transformer",
+  "add_cls": true,
+  "add_sep": false,
   "cls_num": 1
 }
