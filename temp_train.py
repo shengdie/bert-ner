@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from dataloader import load_data, load_vocab, Config, pad_batch, NERDataSet
 
 config = Config('./config.json')
-config.batch_size = 45
+config.batch_size = 50
 #config.inc_dig = True
 train_dataset = NERDataSet(os.path.join(config.data_path, 'train.tsv'), os.path.join(config.data_path, 'train_rel.npz'), config )
 test_dataset = NERDataSet(os.path.join(config.data_path, 'test.tsv'), os.path.join(config.data_path, 'test_rel.npz'), config )
@@ -20,7 +20,7 @@ test_dataloader = DataLoader(dataset=test_dataset, batch_size=config.batch_size,
 #lr1 = 0.001
 lr2 = 0.0001
 record = {}
-for m in ['cls', 'ave', 'pair_ave', 'pair_transformer']:
+for m in ['ave']:
     config.method = m
     net = model(config, ner_state_dict_path=None)
     torch.cuda.empty_cache()

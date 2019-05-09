@@ -32,6 +32,7 @@ class BertForTokenClassification(nn.Module):
 
     def __init__(self, config, relnum, bert_state_dict=None):
         super().__init__()
+        self.config = config
         self.num_labels = len(config.idx2tag)
         self.idx2tag = config.idx2tag
         bert_config = BertConfig.from_json_file(config.bert_conf_path)
