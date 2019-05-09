@@ -33,7 +33,7 @@ class BertForTokenClassification(nn.Module):
         if bert_state_dict is not None:
             self.bert.load_state_dict(bert_state_dict)
         # we don't fine tune bert, it requires large GPU mem
-        self.bert.eval()
+        #self.bert.eval()
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         
         #self.rnn = nn.LSTM(bidirectional=True, num_layers=2, input_size=768, hidden_size=768//2, batch_first=True)
