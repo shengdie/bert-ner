@@ -27,7 +27,8 @@ for m in ['ave']:
     # train
     #net.train(train_dataloader, test_dataloader, 1, config.idx2tag, 
     #          save_weight_path=None, start_save=1, lr=lr1)
-    net.finetune_bert(True)
+    
+    net.finetune_bert(True) # we can fine tune bert at begining.
     net.train(train_dataloader, test_dataloader, 5, config.idx2tag, 
               save_weight_path=None, start_save=1, lr=lr2)
     record[m] = copy.deepcopy(net.record)

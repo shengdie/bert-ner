@@ -27,11 +27,8 @@ class NerLSTM(nn.Module):
                                     packx.batch_sizes, 
                                     sorted_indices=packx.sorted_indices, 
                                     unsorted_indices=packx.unsorted_indices)
-        #print(packx.data)
         sq_out, (hn, _) = self.lstm(embed)
         sq_out= self.dropout(sq_out.data)
-        #print(hn.size())
-        #rout = self.relation(self.dropout(hn[-1]))
         rout = self.relation(sq_out[:len(x)])
 
         logits = self.classifer(sq_out)
@@ -41,11 +38,9 @@ class NerLSTM(nn.Module):
             loss = loss_fct(logits[len(x):], packy.data)
             
             mask = relations > 0
-            #print(relations.size())
-            #print(rout.size())
             loss_fctr = nn.CrossEntropyLoss()
             if len(relations[mask]) > 0:
-                loss += loss_fctr(rout.view(-1, 10, 10)[mask], relations[mask])
+                loss += loss_fctr(rout.view(-1, 10, 10)[mask], relations[mask]) # the first cls token is only for rel extraction, exclude from ner loss
             return loss
         else:
             logits.detach()

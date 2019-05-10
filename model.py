@@ -4,11 +4,7 @@ import torch
 import numpy as np
 from collections import OrderedDict
 from torch.optim import Adam
-#from pytorch_pretrained_bert import BertForTokenClassification, BertAdam
 from pytorch_pretrained_bert import BertTokenizer, BertConfig, BertAdam
-#from berttokenclassification import BertForTokenClassification
-#from bertrelationcls import BertForTokenClassification
-#from bertrelationbert import BertForTokenClassification
 
 from tqdm.auto import tqdm
 from help_func import f1_score
@@ -25,10 +21,10 @@ class model(object):
             if config.inc_first: self.relnum += 1
         else:
             self.relnum = config.max_concept ** 2
-        #b_conf = BertConfig.from_json_file(config.bert_conf_path)
+        
         if ner_state_dict_path is None:
             tmp_d = torch.load(config.bert_weight_path, map_location='cpu')
-            
+            # the weight name does not match, need some change.
             if len(tmp_d.keys()) > 201:
                 bert_state_dict = OrderedDict()
                 for i in list(tmp_d.keys())[:199]:
@@ -36,17 +32,6 @@ class model(object):
                     if i.find('bert') > -1:
                         x = '.'.join(i.split('.')[1:])
                     bert_state_dict[x] = tmp_d[i]
-                #for i in list(tmp_d.keys())[:199]:
-                #    state_dict[i] = tmp_d[i]
-                # cls_weight = torch.Tensor(num_class, config.hidden_size)
-                # cls_bias = torch.Tensor(num_class)
-                # torch.nn.init.kaiming_uniform_(cls_weight, a=math.sqrt(5))
-                # fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(cls_weight)
-                # bound = 1 / math.sqrt(fan_in)
-                # torch.nn.init.uniform_(cls_bias, -bound, bound)
-            
-                # state_dict['classifier.weight'] = cls_weight
-                # state_dict['classifier.bias'] = cls_bias
             else:
                 bert_state_dict = tmp_d
         else:
@@ -54,8 +39,6 @@ class model(object):
 
         if config.method == 'cls':
             from bertrelationcls import BertForTokenClassification
-        elif config.method == 'bert':
-            from bertrelationbert import BertForTokenClassification
         elif config.method == 'ave':
             from bertrelationave import BertForTokenClassification
         elif config.method == 'pair_ave':
@@ -67,12 +50,9 @@ class model(object):
         if ner_state_dict_path is not None:
             self.load(ner_state_dict_path)
 
-        
-        #self.b_model.load_state_dict(state_dict)
         self.optimizer = None
         self.optim_params = None
         self.finetune_bert(False) # default fix bert
-        #self.optimizer = Adam(self.b_model.parameters(), lr = config.lr, weight_decay=0.01)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if self.device.type == 'cuda':
@@ -119,8 +99,7 @@ class model(object):
                                 attention_mask=b_input_mask, labels=b_labels, relations=b_rels)
                     # backward pass
                     loss.backward()
-                    # clip grad
-                    #torch.nn.utils.clip_grad_norm_(parameters=self.b_model.parameters(), max_norm=max_grad_norm)
+                    
                     # update parameters
                     self.optimizer.step()
                     #self.b_model.zero_grad()
@@ -133,7 +112,6 @@ class model(object):
             print('========== * Evaluating * ===========')
             ret_dic = self.predict(val_dataloader, tags)
 
-            #print("Validation loss: {}".format(ret_dic['loss']))
             print("Validation precision: {}".format(ret_dic['prec']))
             print("F1-Score: {}".format(ret_dic['f1-score']))
             print('Relation acc: {}'.format(ret_dic['rel_acc']))
@@ -145,7 +123,6 @@ class model(object):
                     print('Saving weight...\n')
                     self.save(save_weight_path)
             self.train_loss.append(loss.item())
-            #self.val_loss.append(ret_dic['loss'])
             self.f1score.append(ret_dic['f1-score'])
             self.recall.append(ret_dic['recall'])
             self.prec.append(ret_dic['prec'])
@@ -168,8 +145,6 @@ class model(object):
             b_input_ids, b_labels, b_input_mask, b_rels = batch
             
             with torch.no_grad():
-                #tmp_eval_loss = self.b_model(b_input_ids, token_type_ids=None,
-                #                    attention_mask=b_input_mask, labels=b_labels)
                 logits, rout = self.b_model(b_input_ids, token_type_ids=None,
                                 attention_mask=b_input_mask)
 
@@ -184,26 +159,21 @@ class model(object):
                 nonez[:, 0] = False
             if self.config.add_cls:
                 mask[:,0] = False
-            #(rels_pred[nonez] == rels_true[nonez]).sum() / nonez.sum()
             relations_pred.extend(rels_pred)
             relations_true.extend(rels_true)
             none_z.extend(nonez)
 
             label_ids = b_labels.to('cpu').numpy()
             pred = np.argmax(logits, axis=2)
-            # don't count I-<P>
+            # don't count I-<P>, since we can know that, all word piece is started with '#'，thus we can know from the input sentence
             mask[label_ids == 1] = False
             predictions.extend([p[m] for p, m in zip(pred, mask)])
 
             true_labels.extend([l[m] for l, m in zip(label_ids, mask)])
-            
-            #eval_loss += tmp_eval_loss.mean().item()
 
             nb_eval_steps += 1
-        #return relations_pred, relations_true
-        #eval_loss = eval_loss/nb_eval_steps
         pred_tags = [[tags[pi] for pi in p] for p in predictions]
-        valid_tags = [[tags[li] for li in l] for l in true_labels]
+        valid_tags = [[tags[li] if li != 1 else tags[0] for li in l] for l in true_labels]
         
         # relation accuray with no relation
         rel_acc = np.array([[(p[m] == t[m]).sum(), m.sum()] for p, t, m in zip(relations_pred, relations_true, none_z)])
@@ -248,33 +218,8 @@ class model(object):
             for params in self.b_model.bert.parameters():
                 params.requires_grad = True
 
-
-
-
-    # def full_trainning(self, full_trainning, lr=1e-3):
-    #     """If full_training, then train the classifier + BERT, else only train the classifier
-    #     """
-
-    #     if full_trainning:
-    #         param_optimizer = list(self.b_model.named_parameters())
-    #         no_decay = ['bias', 'gamma', 'beta']
-    #         optimizer_grouped_parameters = [
-    #             {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-    #             'weight_decay_rate': 0.01},
-    #             {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-    #             'weight_decay_rate': 0.0}
-    #         ]
-    #     else:
-    #         param_optimizer = list(self.b_model.classifier.named_parameters()) 
-    #         optimizer_grouped_parameters = [{"params": [p for n, p in param_optimizer], 'weight_decay_rate': 0.01}]
-    #     self.optimizer = Adam(optimizer_grouped_parameters, lr=lr)
-
     def save(self, path):
         torch.save(self.b_model.state_dict(), path)
-    def save_hist(self, path):
-        if path is not None:
-            hist = np.array([self.train_loss, self.rel_acc, self.prec, self.recall, self.f1score])
-            np.savetxt(path, hist.T, header='train loss, rel acc, precision, recall, f1-score')
     def load(self, path):
         self.b_model.load_state_dict(torch.load(path, map_location='cpu'))
 
@@ -297,17 +242,6 @@ class RelationLearner(object):
                     if i.find('bert') > -1:
                         x = '.'.join(i.split('.')[1:])
                     bert_state_dict[x] = tmp_d[i]
-                #for i in list(tmp_d.keys())[:199]:
-                #    state_dict[i] = tmp_d[i]
-                # cls_weight = torch.Tensor(num_class, config.hidden_size)
-                # cls_bias = torch.Tensor(num_class)
-                # torch.nn.init.kaiming_uniform_(cls_weight, a=math.sqrt(5))
-                # fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(cls_weight)
-                # bound = 1 / math.sqrt(fan_in)
-                # torch.nn.init.uniform_(cls_bias, -bound, bound)
-            
-                # state_dict['classifier.weight'] = cls_weight
-                # state_dict['classifier.bias'] = cls_bias
             else:
                 bert_state_dict = tmp_d
         else:
@@ -335,6 +269,9 @@ class RelationLearner(object):
         self.val_loss = []
         self.rel_acc = []
         self.rel_raw_acc = []
+        self.train_time = []
+        self.record = {'train_loss': self.train_loss, 'train_time': self.train_time, 
+                        'rel_acc': self.rel_raw_acc, 'rel_acc_r': self.rel_acc}
 
     def train(self, train_dataloader, val_dataloader, epochs, save_weight_path=None, start_save=3, lr=None):
         if lr is None:
@@ -362,23 +299,19 @@ class RelationLearner(object):
                                 attention_mask=b_input_mask, relations=b_rels)
                     # backward pass
                     loss.backward()
-                    # clip grad
-                    #torch.nn.utils.clip_grad_norm_(parameters=self.b_model.parameters(), max_norm=max_grad_norm)
                     # update parameters
                     self.optimizer.step()
                     #self.b_model.zero_grad()
                     pbar.update(1)
                     if step % ebatches == 0:
                         pbar.write("Step [{}/{}] train loss: {}".format(step, len(train_dataloader), loss.item()))
-
-            print('- Time elasped: {:.5f} seconds\n'.format(time.time() - start_time))
+            self.train_time.append(time.time() - start_time)
+            print('- Time elasped: {:.5f} seconds\n'.format(self.train_time[-1]))
             # VALIDATION on validation set
             print('========== * Evaluating * ===========')
             ret_dic = self.predict(val_dataloader)
 
             print("Validation loss: {}".format(ret_dic['loss']))
-            #print("Validation precision: {}".format(ret_dic['prec']))
-            #print("F1-Score: {}".format(ret_dic['f1-score']))
             print('Relation acc: {}'.format(ret_dic['rel_acc']))
             print('Relation raw acc: {}\n'.format(ret_dic['raw_rel_acc']))
             
@@ -388,12 +321,11 @@ class RelationLearner(object):
                     print('Saving weight...\n')
                     self.save(save_weight_path)
             self.train_loss.append(loss.item())
-            #self.val_loss.append(ret_dic['loss'])
-            #self.f1score.append(ret_dic['f1-score'])
-            #self.recall.append(ret_dic['recall'])
-            #self.prec.append(ret_dic['prec'])
             self.rel_acc.append(ret_dic['rel_acc'])
             self.rel_raw_acc.append(ret_dic['raw_rel_acc'])
+            self.record['train_time_epoch'] = sum(self.train_time) /len(self.train_time)
+            self.record['dataset_size'] = len(train_dataloader) * self.config.batch_size
+            
 
             self.total_epoch += 1
 
@@ -412,30 +344,22 @@ class RelationLearner(object):
                                     attention_mask=b_input_mask, relations=b_rels)
                 logits = self.b_model(b_input_ids, token_type_ids=b_type_ids,
                                 attention_mask=b_input_mask)
-
-            #mask = b_input_mask.to('cpu').numpy().astype(bool)
             logits = logits.detach().cpu().numpy()
 
             rels_true = b_rels.to('cpu').numpy().astype(int)
             rels_pred = np.argmax(logits.reshape((-1, 10)), axis=-1)
-            #nonez = rels_true != 0
-            #(rels_pred[nonez] == rels_true[nonez]).sum() / nonez.sum()
+
             relations_pred.extend(rels_pred)
             relations_true.extend(rels_true)
-            #none_z.extend(nonez)
             
             eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
-        #print(relations_true, none_z)
         eval_loss /= nb_eval_steps
-        #sreturn relations_pred, relations_true, none_z
-        #rel_acc = np.array([[(p[m] == t[m]).sum(), m.sum()] for p, t, m in zip(relations_pred, relations_true, none_z)])
         relations_true = np.array(relations_true)
         relations_pred = np.array(relations_pred)
         mask = relations_true > 1
         rel_acc = (relations_true[mask] == relations_pred[mask]).sum() / mask.sum()
         ret_dic['loss'] = eval_loss
-        #ret_dic['prec'], ret_dic['recall'], ret_dic['f1-score'] = f1_score(valid_tags, pred_tags)
         ret_dic['rel_acc'] = rel_acc
         ret_dic['raw_rel_acc'] = np.average(relations_true == relations_pred)
         ret_dic['relat_pred'] = relations_pred
@@ -469,10 +393,6 @@ class RelationLearner(object):
 
     def save(self, path):
         torch.save(self.b_model.state_dict(), path)
-    def save_hist(self, path):
-        if path is not None:
-            hist = np.array([self.train_loss, self.rel_acc, self.rel_raw_acc])
-            np.savetxt(path, hist.T, header='train loss, rel acc, rel raw acc')
     def load(self, path):
         self.b_model.load_state_dict(torch.load(path, map_location='cpu'))
 

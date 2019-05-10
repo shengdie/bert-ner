@@ -2,14 +2,6 @@ import torch
 from torch import nn
 from pytorch_pretrained_bert.modeling import BertPreTrainedModel, BertEncoder, BertPooler
 
-# class TransformerPoolerClassifier(nn.Module):
-#     def __init__(self, config, num_classes, dropout=0.1):
-#         super().__init__()
-#         self.transformer = Transformer(config)
-#         self.pclassifier = PoolerClassifier(config.hidden_size, num_classes, dropout=dropout)
-#     def forward()
-
-
 class PoolerClassifier(nn.Module):
     def __init__(self, hidden_size, num_classes, cls_token_num=1, dropout=0.1):
         super(PoolerClassifier, self).__init__()

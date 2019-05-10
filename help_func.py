@@ -34,10 +34,6 @@ def get_entities(seq, suffix=False):
             begin_offset = i
         prev_tag = tag
         prev_type = type_
-        # if type_ != '<P>':
-        #     prev_type = type_ 
-        # elif prev_type == 'O':
-        #     prev_type = type_
 
     return chunks
 
@@ -221,11 +217,6 @@ def start_of_chunk_p(prev_tag, tag, prev_type, type_):
 
     if tag == 'B': chunk_start = True
     #if tag == 'S': chunk_start = True
-
-    #if prev_tag == 'E' and tag == 'E': chunk_start = True
-    #if prev_tag == 'E' and tag == 'I': chunk_start = True
-    #if prev_tag == 'S' and tag == 'E': chunk_start = True
-    #if prev_tag == 'S' and tag == 'I': chunk_start = True
     if prev_tag == 'O' and tag == 'E': chunk_start = True
     if prev_tag == 'O' and tag == 'I' and type_ != '<P>': chunk_start = True
 
@@ -241,21 +232,6 @@ def pair(*arg):
         for j in range(l-i-1):
             pairs.append([arg[i], arg[i+j+1]])
     return pairs
-
-# def get_e(label):
-#     p,s = 0,0
-#     ck = []
-#     for i, l in enumerate(label):  
-#         if l - 3 != p and l != 1:
-#             if i > s and p > 1:
-#                 ck.append((s,i))
-#         if l -3 != p and l > 1:
-#             s = i
-#         if l != 1:
-#             p = l -3 if l > 4 else l
-#     if l > 1:
-#         ck.append((i,i+1))    
-#     return ck
 
 def sc(p, c):
     if c != 1:

@@ -188,32 +188,6 @@ class RelationDataSet(Dataset):
     def __getitem__(self, idx):
         return self.concepts[idx], self.cons_types[idx], self.relations[idx]
 
-# def pad_batch_rels(batch, max_len=None, pad=0, idO=0):
-#     """pad a batch to max len of seq if max_len is None"""
-#     cons = [s[0].copy() for s in batch]
-#     cons_len = [len(s) for s in cons]
-#     cons_t = [s[1].copy() for s in batch]
-#     relations = [s[-1] for s in batch]
-#     #atts = [s[-1] for s in batch]
-#     atts = [None] * len(cons)
-#     max_slen = max(cons_len)
-#     if max_len is None: max_len = max_slen
-#     if max_len >= max_slen:
-#         for i in range(len(cons)):
-#             atts[i] = [1] * cons_len[i] + [0] * (max_len - cons_len[i])
-#             cons[i].extend([pad] * (max_len - cons_len[i]))
-#             cons_t[i].extend([idO] * (max_len - cons_len[i]))
-#     else:
-#         for i in range(len(cons)):
-#             if max_len >= cons_len[i]:
-#                 atts[i] = [1] * cons_len[i] + [0] * (max_len - cons_len[i])
-#                 cons[i].extend([pad] * (max_len - cons_len[i]))
-#                 cons_t[i].extend([idO] * (max_len - cons_len[i]))
-#             else:
-#                 atts[i] = [1] * max_len
-#                 cons[i] = cons[i][:max_len]
-#                 cons_t[i] = labels[i][:max_len]
-#     return torch.LongTensor(sents), torch.LongTensor(labels), torch.LongTensor(atts), torch.LongTensor(relations)
 
 def load_pure_relations(file, cls='[CLS]', sep='[SEP]', add_cls=False, add_sep=False, remove_no=0):
     with open(file, 'r') as f:
